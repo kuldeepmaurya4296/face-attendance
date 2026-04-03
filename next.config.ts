@@ -5,6 +5,7 @@ const nextConfig = {
     ignoreBuildErrors: true,
   },
   experimental: {},
+
   async rewrites() {
     return [
       {

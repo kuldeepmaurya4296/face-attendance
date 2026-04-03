@@ -1,4 +1,6 @@
 export async function register() {
+  console.log('--- Registering Next.js instrumentation ---');
+
   // Only execute on the Node.js runtime (server side)
   if (process.env.NEXT_RUNTIME === 'nodejs') {
     const { spawn } = await import('child_process');
