@@ -14,13 +14,18 @@ export async function POST(req: NextRequest) {
     }
 
     await connectDB();
-    const { companyName, plan, adminName, adminEmail, adminPassword } = await req.json();
+    const { companyName, org_type, plan, adminName, adminEmail, adminPassword } = await req.json();
+
+    if (!org_type || !['Company', 'Institute'].includes(org_type)) {
+      return NextResponse.json({ error: 'org_type must be "Company" or "Institute"' }, { status: 400 });
+    }
 
     const existingUser = await User.findOne({ email: adminEmail });
     if (existingUser) return NextResponse.json({ error: 'Admin email already exists' }, { status: 400 });
 
     const company = new Company({
       name: companyName,
+      org_type,
       plan: plan || 'Free'
     });
     await company.save();
@@ -34,10 +39,10 @@ export async function POST(req: NextRequest) {
     });
     await superAdmin.save();
 
-    return NextResponse.json({ 
-       message: 'Company onboarded successfully!', 
-       company, 
-       superAdmin 
+    return NextResponse.json({
+      message: `${org_type} onboarded successfully!`,
+      company,
+      superAdmin
     }, { status: 201 });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });

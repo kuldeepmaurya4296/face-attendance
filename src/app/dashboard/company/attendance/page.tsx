@@ -3,44 +3,65 @@
 import React, { useEffect, useState } from 'react';
 import api from '@/lib/api';
 import PageHeader from '@/components/dashboard/shared/PageHeader';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Download, Search } from 'lucide-react';
 
-export default function AttendancePage() {
-  const [attendance, setAttendance] = useState<any[]>([]);
+export default function AttendanceLogsPage() {
+  const [data, setData] = useState<any>({ total_users: 0, checked_out: [], late_arrivals: [], not_checked_in: [] });
   const [loading, setLoading] = useState(true);
+  const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
 
   useEffect(() => {
-    api.get('/attendance/company').then(res => {
-      setAttendance(res.data);
+    setLoading(true);
+    api.get(`/attendance/daily-summary?date=${date}`).then(res => {
+      setData(res.data);
       setLoading(false);
     }).catch(() => setLoading(false));
-  }, []);
+  }, [date]);
 
   return (
     <div className="p-4 md:p-8 space-y-6">
-      <PageHeader title="Attendance Logs" subtitle="Company Wide Attendance" />
-      <div className="border border-border rounded-lg bg-white p-6 space-y-4">
-        <h3 className="text-[16px] font-bold">Attendance Records</h3>
-        {loading ? <div className="p-8 flex justify-center"><Loader2 className="animate-spin text-primary" size={32} /></div> : (
-          <div className="overflow-x-auto rounded-md border border-border">
-            <table className="w-full text-left">
-              <thead className="bg-surface text-[12px] font-semibold text-muted border-b border-border">
-                <tr><th className="p-3 px-4">Employee</th><th className="p-3">Date</th><th className="p-3">Check In</th><th className="p-3">Check Out</th><th className="p-3">Mode</th><th className="p-3 text-center">Status</th></tr>
-              </thead>
-              <tbody className="text-[14px]">
-                {attendance.map(a => (
-                  <tr key={a._id} className="border-t border-border-light hover:bg-surface">
-                    <td className="p-3 px-4"><p className="font-medium">{a.user_id?.name}</p><p className="text-[12px] text-muted">{a.user_id?.email}</p></td>
-                    <td className="p-3 text-[12px]">{new Date(a.date).toLocaleDateString()}</td>
-                    <td className="p-3 text-[12px]">{a.check_in ? new Date(a.check_in).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '—'}</td>
-                    <td className="p-3 text-[12px]">{a.check_out ? new Date(a.check_out).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '—'}</td>
-                    <td className="p-3 text-[12px] text-muted">{a.mode}</td>
-                    <td className="p-3 text-center"><span className={`px-2 py-0.5 rounded text-[12px] font-medium ${a.status === 'Present' ? 'bg-green-100 text-green-700' : typeof a.status === 'string' && a.status === 'Late' ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'}`}>{a.status}</span></td>
-                  </tr>
-                ))}
-                {attendance.length === 0 && <tr><td colSpan={6} className="p-8 text-center text-muted">No attendance records found.</td></tr>}
-              </tbody>
-            </table>
+      <PageHeader title="Attendance Logs" subtitle="Daily Organization View" />
+
+      <div className="border border-border rounded-lg bg-white p-6 space-y-6">
+        <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+           <h3 className="text-[16px] font-bold">Daily Snapshot</h3>
+           <div className="flex gap-2">
+             <input type="date" value={date} onChange={e => setDate(e.target.value)} className="bg-surface border border-border p-2 rounded-md outline-none text-[13px] font-medium" />
+             <button className="px-4 py-2 bg-surface border border-border rounded-md text-[13px] font-medium flex items-center gap-2 hover:bg-surface-hover">
+               <Download size={16} /> Export CSV
+             </button>
+           </div>
+        </div>
+
+        {loading ? (
+          <div className="flex justify-center p-12"><Loader2 className="animate-spin text-primary" size={32} /></div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+             <div className="border border-border rounded-md p-4 bg-surface">
+               <h4 className="text-[14px] font-semibold mb-3 border-b border-border pb-2">Active checked in ({data.present + data.late})</h4>
+               {data.checked_out.length > 0 && <p className="text-[12px] text-muted mb-2">{data.checked_out.length} users completed their shift.</p>}
+               <p className="text-[13px] text-muted">A fully granular table view will be added in Phase 8.</p>
+             </div>
+             
+             <div className="border border-border rounded-md p-4 bg-surface">
+               <h4 className="text-[14px] font-semibold mb-3 border-b border-border pb-2 text-warning">Late Arrivals ({data.late_arrivals?.length || 0})</h4>
+               <ul className="space-y-1">
+                 {data.late_arrivals?.map((l: any, i: number) => (
+                   <li key={i} className="text-[13px] flex justify-between"><span>{l.name}</span> <span className="text-amber-600">{l.late_by}m late</span></li>
+                 ))}
+                 {data.late_arrivals?.length === 0 && <li className="text-[12px] text-muted">No late arrivals</li>}
+               </ul>
+             </div>
+
+             <div className="border border-border rounded-md p-4 bg-surface">
+               <h4 className="text-[14px] font-semibold mb-3 border-b border-border pb-2 text-danger">Absent / Not Scanned ({data.not_checked_in?.length || 0})</h4>
+               <ul className="space-y-1">
+                 {data.not_checked_in?.map((l: any, i: number) => (
+                   <li key={i} className="text-[13px] truncate">{l.name}</li>
+                 ))}
+                 {data.not_checked_in?.length === 0 && <li className="text-[12px] text-muted">Everyone checked in</li>}
+               </ul>
+             </div>
           </div>
         )}
       </div>

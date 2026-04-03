@@ -38,7 +38,7 @@ export default function MyLeavesPage() {
                     <FileText size={16} className="text-warning" />
                     <div>
                       <p className="font-medium text-[14px]">{new Date(l.from_date).toLocaleDateString()} - {new Date(l.to_date).toLocaleDateString()}</p>
-                      <p className="text-[12px] text-muted truncate max-w-[200px]">{l.reason}</p>
+                      <p className="text-[12px] text-muted">{l.leave_type || 'Casual'} · {l.reason}</p>
                     </div>
                   </div>
                   <span className={`px-2 py-0.5 rounded text-[12px] font-medium ${l.status === 'Approved' ? 'bg-green-100 text-green-700' : l.status === 'Pending' ? 'bg-blue-100 text-blue-700' : 'bg-red-100 text-red-700'}`}>{l.status}</span>

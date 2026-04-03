@@ -5,13 +5,29 @@ import { useRouter } from 'next/navigation';
 
 export type Role = 'Owner' | 'SuperAdmin' | 'Admin' | 'User';
 
+export interface AdminPermissions {
+  manage_personnel: boolean;
+  approve_leaves: boolean;
+  view_attendance: boolean;
+  manage_settings: boolean;
+  manage_holidays: boolean;
+}
+
 export interface User {
   _id: string;
   name: string;
   email: string;
   role: Role;
+  phone?: string;
   department?: string;
+  designation?: string;
+  employee_id?: string;
+  roll_number?: string;
+  class_name?: string;
+  section?: string;
   company_id?: string;
+  org_type?: 'Company' | 'Institute';
+  admin_permissions?: AdminPermissions;
 }
 
 interface AuthContextType {
@@ -20,6 +36,7 @@ interface AuthContextType {
   login: (userData: User, token: string) => void;
   logout: () => void;
   isLoading: boolean;
+  updateUser: (userData: Partial<User>) => void;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -28,6 +45,7 @@ const AuthContext = createContext<AuthContextType>({
   login: () => {},
   logout: () => {},
   isLoading: true,
+  updateUser: () => {},
 });
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
@@ -37,7 +55,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const router = useRouter();
 
   useEffect(() => {
-    // Check for saved auth state on mount
     const savedToken = localStorage.getItem('token');
     const savedUser = localStorage.getItem('user');
 
@@ -63,8 +80,16 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     router.push('/auth/login');
   };
 
+  const updateUser = (userData: Partial<User>) => {
+    if (user) {
+      const updated = { ...user, ...userData };
+      setUser(updated);
+      localStorage.setItem('user', JSON.stringify(updated));
+    }
+  };
+
   return (
-    <AuthContext.Provider value={{ user, token, login, logout, isLoading }}>
+    <AuthContext.Provider value={{ user, token, login, logout, isLoading, updateUser }}>
       {children}
     </AuthContext.Provider>
   );

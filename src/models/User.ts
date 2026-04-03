@@ -6,12 +6,29 @@ const userSchema = new mongoose.Schema({
   password: { type: String, required: true },
   role: { 
     type: String, 
-    enum: ['Owner', 'SuperAdmin', 'Admin', 'User', 'Employee', 'Student'], 
+    enum: ['Owner', 'SuperAdmin', 'Admin', 'User'], 
     default: 'User' 
   },
-  department: { type: String },
   company_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Company' },
   face_embeddings: { type: [Number] },
+
+  // === Common Fields ===
+  phone: { type: String },
+  status: { type: String, enum: ['Active', 'Inactive'], default: 'Active' },
+
+  // === Employee-specific fields (org_type = 'Company') ===
+  employee_id: { type: String },
+  designation: { type: String },
+  department: { type: String },
+  joining_date: { type: Date },
+
+  // === Student-specific fields (org_type = 'Institute') ===
+  roll_number: { type: String },
+  class_name: { type: String },
+  section: { type: String },
+  enrollment_year: { type: Number },
+  parent_phone: { type: String },
+
   createdAt: { type: Date, default: Date.now }
 });
 
