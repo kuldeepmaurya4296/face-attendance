@@ -1,5 +1,3 @@
-import UserProfilePage from '../../user/profile/page';
+'use client';
 
-export default function AdminProfilePage() {
-  return <UserProfilePage />;
-}
+export { default } from '@/app/dashboard/company/profile/page';

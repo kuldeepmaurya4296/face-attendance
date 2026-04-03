@@ -1,5 +1,3 @@
-import UserProfilePage from '../../user/profile/page';
+'use client';
 
-export default function PlatformProfilePage() {
-  return <UserProfilePage />;
-}
+export { default } from '@/app/dashboard/company/profile/page';

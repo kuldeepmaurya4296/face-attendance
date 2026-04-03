@@ -6,7 +6,8 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import {
   LayoutDashboard, Building, Users, Calendar, Camera, BookOpen,
-  LogOut, Shield, Map, MonitorPlay, CalendarDays, Settings, User as UserIcon
+  LogOut, Shield, Map, MonitorPlay, CalendarDays, Settings, User as UserIcon,
+  BarChart3
 } from 'lucide-react';
 
 export default function Sidebar() {
@@ -33,6 +34,7 @@ export default function Sidebar() {
     { name: orgType === 'Institute' ? 'Students & Staff' : 'Personnel', href: '/dashboard/company/personnel', icon: Users },
     { name: 'Attendance', href: '/dashboard/company/attendance', icon: Calendar },
     { name: 'Leave Requests', href: '/dashboard/company/leaves', icon: BookOpen },
+    { name: 'Reports', href: '/dashboard/company/reports', icon: BarChart3 },
     { name: 'Holidays', href: '/dashboard/company/holidays', icon: CalendarDays },
     { name: 'Settings', href: '/dashboard/company/settings', icon: Settings },
     { name: 'My Profile', href: '/dashboard/company/profile', icon: UserIcon },
@@ -45,6 +47,7 @@ export default function Sidebar() {
     { name: orgType === 'Institute' ? 'Students' : 'Employees', href: '/dashboard/admin/personnel', icon: Users, perm: 'manage_personnel' },
     { name: 'Attendance', href: '/dashboard/admin/attendance', icon: Calendar, perm: 'view_attendance' },
     { name: 'Leaves', href: '/dashboard/admin/leaves', icon: BookOpen, perm: 'approve_leaves' },
+    { name: 'Reports', href: '/dashboard/admin/reports', icon: BarChart3, perm: 'view_attendance' },
     { name: 'Holidays', href: '/dashboard/admin/holidays', icon: CalendarDays, perm: 'manage_holidays' },
     { name: 'Settings', href: '/dashboard/admin/settings', icon: Settings, perm: 'manage_settings' },
     { name: 'My Profile', href: '/dashboard/admin/profile', icon: UserIcon },

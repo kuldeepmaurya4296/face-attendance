@@ -12,4 +12,8 @@ const leaveSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now }
 });
 
+leaveSchema.index({ company_id: 1, status: 1 });
+leaveSchema.index({ user_id: 1, from_date: -1 });
+leaveSchema.index({ company_id: 1, from_date: -1, to_date: 1 });
+
 export default mongoose.models.Leave || mongoose.model('Leave', leaveSchema);

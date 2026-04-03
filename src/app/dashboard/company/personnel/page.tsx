@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
+import { useRouter } from 'next/navigation';
 import api from '@/lib/api';
 import PageHeader from '@/components/dashboard/shared/PageHeader';
 import PermissionGate from '@/components/dashboard/shared/PermissionGate';
@@ -10,6 +11,7 @@ import { Loader2, Plus, Pencil, Trash2, Search, CheckCircle, XCircle } from 'luc
 
 export default function PersonnelPage() {
   const { user } = useAuth();
+  const router = useRouter();
   const orgType = user?.org_type;
   
   const [personnel, setPersonnel] = useState<any[]>([]);
@@ -96,7 +98,7 @@ export default function PersonnelPage() {
               </thead>
               <tbody className="text-[14px]">
                 {filtered.map(p => (
-                  <tr key={p._id} className="border-t border-border-light hover:bg-surface/50 transition-colors">
+                  <tr key={p._id} onClick={() => router.push(`/dashboard/company/personnel/${p._id}`)} className="border-t border-border-light hover:bg-surface/50 transition-colors cursor-pointer">
                     <td className="p-3 px-4">
                       <div className="font-medium text-[14px]">{p.name}</div>
                       <div className="text-[12px] text-muted">{p.email}</div>

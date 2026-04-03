@@ -9,7 +9,7 @@ export async function GET(req: NextRequest) {
     const authResult = await auth(req);
     if (authResult.error) return NextResponse.json({ error: authResult.error }, { status: authResult.status });
 
-    if (!authorize(authResult.user, ['SuperAdmin', 'Admin'])) {
+    if (!authorize(authResult.user, ['Owner', 'SuperAdmin', 'Admin'])) {
       return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
     }
 
@@ -34,7 +34,7 @@ export async function PUT(req: NextRequest) {
     const authResult = await auth(req);
     if (authResult.error) return NextResponse.json({ error: authResult.error }, { status: authResult.status });
 
-    if (!authorize(authResult.user, ['SuperAdmin', 'Admin'])) {
+    if (!authorize(authResult.user, ['Owner', 'SuperAdmin', 'Admin'])) {
       return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
     }
 
@@ -51,14 +51,20 @@ export async function PUT(req: NextRequest) {
 
     // Update settings
     if (body.settings) {
-      company.settings = { ...company.settings?.toObject?.() || company.settings, ...body.settings };
+      if (!company.settings) company.settings = {};
+      Object.assign(company.settings, body.settings);
     }
 
     // Only SuperAdmin can update admin_permissions
     if (body.admin_permissions && authResult.user.role === 'SuperAdmin') {
-      company.admin_permissions = { ...company.admin_permissions?.toObject?.() || company.admin_permissions, ...body.admin_permissions };
+      if (!company.admin_permissions) company.admin_permissions = {};
+      Object.assign(company.admin_permissions, body.admin_permissions);
     }
 
+    if (!company.org_type) {
+      company.org_type = 'Company'; // Repair legacy document
+    }
+    
     await company.save();
 
     return NextResponse.json({
@@ -67,6 +73,10 @@ export async function PUT(req: NextRequest) {
       admin_permissions: company.admin_permissions
     });
   } catch (err: any) {
+    console.error('Settings PUT Error:', err);
+    if (err.name === 'ValidationError') {
+      return NextResponse.json({ error: err.message }, { status: 400 });
+    }
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }

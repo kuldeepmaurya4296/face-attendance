@@ -32,4 +32,7 @@ const userSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now }
 });
 
+userSchema.index({ company_id: 1, status: 1, role: 1 });
+userSchema.index({ company_id: 1, department: 1 });
+
 export default mongoose.models.User || mongoose.model('User', userSchema);

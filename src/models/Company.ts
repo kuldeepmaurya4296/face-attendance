@@ -26,6 +26,12 @@ const companySchema = new mongoose.Schema({
     manage_settings: { type: Boolean, default: false },
     manage_holidays: { type: Boolean, default: false },
   },
+  leave_policy: {
+    casual: { type: Number, default: 12 },
+    sick: { type: Number, default: 6 },
+    earned: { type: Number, default: 15 },
+    unpaid: { type: Number, default: -1 },  // -1 = unlimited
+  },
   createdAt: { type: Date, default: Date.now }
 });
 
