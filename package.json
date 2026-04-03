@@ -6,15 +6,23 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "install:all": "npm install && cd ml-engine && python -m pip install -r requirements.txt"
   },
   "dependencies": {
+    "axios": "^1.14.0",
+    "jsonwebtoken": "^9.0.3",
+    "lucide-react": "^1.7.0",
+    "mongoose": "^9.3.3",
     "next": "16.2.2",
     "react": "19.2.4",
-    "react-dom": "19.2.4"
+    "react-dom": "19.2.4",
+    "zustand": "^5.0.12"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
+    "@types/jsonwebtoken": "^9.0.10",
+    "@types/mongoose": "^5.11.96",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
