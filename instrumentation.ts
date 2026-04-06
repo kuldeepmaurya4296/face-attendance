@@ -6,13 +6,12 @@ export async function register() {
     const { spawn } = await import('child_process');
     const path = await import('path');
     
-    // The ml-engine folder is now inside the root or frontend.
-    // Given the previous move command failed to put it in src, let's see where it is.
-    // I put it in frontend/ml-engine.
+    // The ml-engine folder is now inside the root.
     const mlPath = path.resolve(process.cwd(), 'ml-engine');
     
     console.log('⚙️ Initializing ML Engine sidecar from:', mlPath);
     
+    // Spawn python process for ML Engine
     const mlProcess = spawn('python', ['-m', 'uvicorn', 'main:app', '--host', '127.0.0.1', '--port', '8000', '--reload'], {
       cwd: mlPath,
       stdio: 'inherit',

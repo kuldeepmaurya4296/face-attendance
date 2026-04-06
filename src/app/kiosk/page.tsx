@@ -5,9 +5,12 @@ import { CameraCapture } from '@/components/CameraCapture';
 import { Loader2, Camera, UserCheck, UserX, Clock, Building, ArrowLeft } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import api from '@/lib/api';
+import { useAuth } from '@/context/AuthContext';
 
 export default function KioskMode() {
   const router = useRouter();
+  const { user, isLoading: authLoading } = useAuth();
+  
   const [companies, setCompanies] = useState<any[]>([]);
   const [selectedCompanyId, setSelectedCompanyId] = useState<string>('');
   const [status, setStatus] = useState<'idle' | 'scanning' | 'success' | 'error'>('idle');
@@ -15,13 +18,38 @@ export default function KioskMode() {
   const [actionTaken, setActionTaken] = useState<'CHECK_IN'|'CHECK_OUT'|null>(null);
 
   useEffect(() => {
-    // For kiosk logic, we need to load active companies so it knows matching gallery
-    api.get('/companies').then(res => {
-      setCompanies(res.data);
-      // Preselect if only one
-      if (res.data.length === 1) setSelectedCompanyId(res.data[0]._id);
-    });
-  }, []);
+    if (authLoading) return;
+    
+    if (!user) {
+      router.push('/auth/login?redirect=/kiosk');
+      return;
+    }
+    
+    if (user.role === 'User') {
+      router.push('/dashboard/user');
+      return;
+    }
+
+    if (user.company_id) {
+      // SuperAdmin or Admin
+      setSelectedCompanyId(user.company_id);
+    } else if (user.role === 'Owner') {
+      // Owner might manage multiple
+      api.get('/companies').then(res => {
+        setCompanies(res.data);
+        if (res.data.length === 1) setSelectedCompanyId(res.data[0]._id);
+      }).catch(err => console.error(err));
+    }
+  }, [user, authLoading, router]);
+
+  const getDashboardUrl = () => {
+    if (!user) return '/auth/login';
+    if (user.role === 'Owner') return '/dashboard/platform';
+    if (user.role === 'SuperAdmin') return '/dashboard/company';
+    if (user.role === 'Admin') return '/dashboard/admin';
+    return '/dashboard/user';
+  };
+
 
   const handleCapture = async (file: File) => {
     if (!selectedCompanyId) {
@@ -85,11 +113,19 @@ export default function KioskMode() {
     }
   };
 
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-black flex items-center justify-center">
+        <Loader2 className="animate-spin text-white" size={48} />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-black flex flex-col pt-8">
       
       <div className="absolute top-6 left-6 z-50">
-        <button onClick={() => router.push('/dashboard/user')} className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-md text-[13px] font-medium flex items-center gap-2 backdrop-blur-md">
+        <button onClick={() => router.push(getDashboardUrl())} className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-md text-[13px] font-medium flex items-center gap-2 backdrop-blur-md">
           <ArrowLeft size={16} /> Exit Kiosk
         </button>
       </div>
