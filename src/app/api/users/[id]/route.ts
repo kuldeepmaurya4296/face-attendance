@@ -17,15 +17,22 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     await connectDB();
     const resolvedParams = await params;
     const { id } = resolvedParams;
-    const { name, email, role, department, password } = await req.json();
+    const body = await req.json();
+    const { 
+      name, email, role, password, phone,
+      employee_id, designation, department, joining_date,
+      roll_number, class_name, section, enrollment_year, parent_phone
+    } = body;
 
     const targetUser = await User.findById(id);
     if (!targetUser) return NextResponse.json({ error: 'User not found' }, { status: 404 });
     
+    // Safety check: Only Owner can modify a SuperAdmin
     if (targetUser.role === 'SuperAdmin' && authResult.user.role !== 'Owner') {
       return NextResponse.json({ error: 'Cannot modify a SuperAdmin account.' }, { status: 403 });
     }
 
+    // Email duplication check
     if (email && email !== targetUser.email) {
       const emailExists = await User.findOne({ email, _id: { $ne: id } });
       if (emailExists) return NextResponse.json({ error: 'Email already in use by another user.' }, { status: 400 });
@@ -34,15 +41,29 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     const updateFields: any = {};
     if (name) updateFields.name = name;
     if (email) updateFields.email = email;
-    if (password) updateFields.password = password;
-    if (department !== undefined) updateFields.department = department;
+    if (password) updateFields.password = password; // Note: In production hashing is handled by pre-save or here
+    if (phone !== undefined) updateFields.phone = phone;
+    
+    // Auth role protection
     if (role && authResult.user.role === 'Owner') updateFields.role = role; 
-    if (role && authResult.user.role === 'SuperAdmin' && role !== 'SuperAdmin') updateFields.role = role;
+    else if (role && authResult.user.role === 'SuperAdmin' && role !== 'SuperAdmin') updateFields.role = role;
+
+    // Company/Institute Fields
+    if (employee_id !== undefined) updateFields.employee_id = employee_id;
+    if (designation !== undefined) updateFields.designation = designation;
+    if (department !== undefined) updateFields.department = department;
+    if (joining_date !== undefined) updateFields.joining_date = joining_date;
+    
+    if (roll_number !== undefined) updateFields.roll_number = roll_number;
+    if (class_name !== undefined) updateFields.class_name = class_name;
+    if (section !== undefined) updateFields.section = section;
+    if (enrollment_year !== undefined) updateFields.enrollment_year = enrollment_year;
+    if (parent_phone !== undefined) updateFields.parent_phone = parent_phone;
 
     const user = await User.findByIdAndUpdate(
       id,
       { $set: updateFields },
-      { new: true }
+      { new: true, runValidators: true }
     ).select('-password -face_embeddings');
 
     return NextResponse.json(user);

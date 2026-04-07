@@ -205,6 +205,7 @@ export function buildConfig(
     half_day_hours: settings?.half_day_hours ?? 4,
     overtime_threshold_hours: settings?.overtime_threshold_hours ?? 9,
     min_checkout_hours: settings?.min_checkout_hours ?? 3,
+    weekend_days: settings?.weekend_days ?? [0, 6],
     org_type: (orgType as OrgType) || 'Company',
   };
 }

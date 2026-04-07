@@ -12,39 +12,45 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
 } from 'recharts';
 
+import UserRegistrationModal from '@/components/dashboard/shared/UserRegistrationModal';
+import { useAuth } from '@/context/AuthContext';
+
 export default function EmployeeDetailPage() {
   const params = useParams();
   const router = useRouter();
+  const { user: currentUser } = useAuth();
   const id = params.id as string;
 
   const [user, setUser] = useState<any>(null);
   const [attendance, setAttendance] = useState<any[]>([]);
   const [leaves, setLeaves] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isEditing, setIsEditing] = useState(false);
   const [month, setMonth] = useState(new Date().getMonth() + 1);
   const [year, setYear] = useState(new Date().getFullYear());
-  const [calendarData, setCalendarData] = useState<any[]>([]);
+  
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      const [userRes, attRes, leaveRes] = await Promise.all([
+        api.get(`/users/${id}`),
+        api.get(`/attendance/company`),
+        api.get('/leaves'),
+      ]);
+      setUser(userRes.data);
+      setAttendance(attRes.data.filter((a: any) => {
+        const uid = typeof a.user_id === 'object' ? a.user_id?._id : a.user_id;
+        return uid === id;
+      }));
+      setLeaves(leaveRes.data.filter((l: any) => {
+        const uid = typeof l.user_id === 'object' ? l.user_id?._id : l.user_id;
+        return uid === id;
+      }));
+    } catch {}
+    setLoading(false);
+  };
 
   useEffect(() => {
-    async function fetchData() {
-      try {
-        const [userRes, attRes, leaveRes] = await Promise.all([
-          api.get(`/users/${id}`),
-          api.get(`/attendance/company`),
-          api.get('/leaves'),
-        ]);
-        setUser(userRes.data);
-        setAttendance(attRes.data.filter((a: any) => {
-          const uid = typeof a.user_id === 'object' ? a.user_id?._id : a.user_id;
-          return uid === id;
-        }));
-        setLeaves(leaveRes.data.filter((l: any) => {
-          const uid = typeof l.user_id === 'object' ? l.user_id?._id : l.user_id;
-          return uid === id;
-        }));
-      } catch {}
-      setLoading(false);
-    }
     fetchData();
   }, [id]);
 
@@ -101,11 +107,22 @@ export default function EmployeeDetailPage() {
   return (
     <div className="p-4 md:p-8 space-y-6">
       {/* Back button + Header */}
-      <div className="flex items-center gap-3">
-        <button onClick={() => router.back()} className="p-2 rounded-md border border-border bg-surface hover:bg-surface-hover transition-colors">
-          <ArrowLeft size={18} />
-        </button>
-        <PageHeader title={user.name} subtitle={user.role === 'Admin' ? 'Administrator' : 'Employee Profile'} />
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <button onClick={() => router.back()} className="p-2 rounded-md border border-border bg-surface hover:bg-surface-hover transition-colors">
+            <ArrowLeft size={18} />
+          </button>
+          <PageHeader title={user.name} subtitle={user.role === 'Admin' ? 'Administrative Official' : 'Personnel Profile'} />
+        </div>
+        
+        {(currentUser?.role === 'SuperAdmin' || currentUser?.role === 'Owner') && (
+          <button 
+            onClick={() => setIsEditing(true)} 
+            className="flex items-center gap-2 px-5 py-2.5 bg-primary text-white rounded-lg text-[13px] font-black uppercase tracking-widest hover:bg-primary-hover shadow-lg shadow-primary/20 transition-all hover:scale-[1.02] active:scale-95"
+          >
+            <UserIcon size={16} /> Edit Identity
+          </button>
+        )}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -239,6 +256,13 @@ export default function EmployeeDetailPage() {
           )}
         </div>
       </div>
+      {isEditing && (
+        <UserRegistrationModal 
+          onClose={() => setIsEditing(false)} 
+          onRefresh={fetchData} 
+          editUser={user} 
+        />
+      )}
     </div>
   );
 }

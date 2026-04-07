@@ -296,6 +296,7 @@ export interface AttendanceEngineConfig {
   half_day_hours: number;
   overtime_threshold_hours: number;
   min_checkout_hours: number;
+  weekend_days: number[];
   org_type: OrgType;
 }
 
