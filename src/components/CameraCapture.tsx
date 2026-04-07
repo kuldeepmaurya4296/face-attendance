@@ -18,6 +18,7 @@ export function CameraCapture({ onCapture, onCancel, autoCaptureInterval, blinkM
   const [isReady, setIsReady] = useState(false);
   const [error, setError] = useState('');
   const [blinkState, setBlinkState] = useState<BlinkState>('waiting');
+  const [isActive, setIsActive] = useState(false);
   const blinkCapturedRef = useRef(false);
 
   const initializeCamera = useCallback(async () => {
@@ -82,22 +83,31 @@ export function CameraCapture({ onCapture, onCancel, autoCaptureInterval, blinkM
 
   // Kiosk auto-capture (existing behavior)
   useEffect(() => {
-    if (autoCaptureInterval && isReady && !blinkMode) {
+    if (autoCaptureInterval && isReady && !blinkMode && isActive) {
       const interval = setInterval(captureFrame, autoCaptureInterval);
       return () => clearInterval(interval);
     }
-  }, [autoCaptureInterval, isReady, captureFrame, blinkMode]);
+  }, [autoCaptureInterval, isReady, captureFrame, blinkMode, isActive]);
 
   // Blink detection mode for Face ID registration
   useEffect(() => {
-    if (!blinkMode || !isReady || blinkCapturedRef.current) return;
+    if (!blinkMode || !isReady || blinkCapturedRef.current || !isActive) return;
 
     setBlinkState('detecting');
     let cancelled = false;
+    let pollCount = 0;
 
     const checkBlink = async () => {
       if (cancelled || blinkCapturedRef.current) return;
       
+      pollCount++;
+      // Stop checking after 10 attempts to avoid spamming the API forever
+      if (pollCount > 10) {
+        setBlinkState('error');
+        setIsActive(false);
+        return;
+      }
+
       const blob = await getFrameBlob();
       if (!blob || cancelled || blinkCapturedRef.current) return;
 
@@ -130,19 +140,19 @@ export function CameraCapture({ onCapture, onCancel, autoCaptureInterval, blinkM
         // ML service might be down, continue polling
       }
 
-      // Poll every 800ms
+      // Poll every 800ms if blink not detected and not cancelled
       if (!cancelled && !blinkCapturedRef.current) {
         setTimeout(checkBlink, 800);
       }
     };
 
     // Start polling after a short delay
-    const startTimer = setTimeout(checkBlink, 1000);
+    const startTimer = setTimeout(checkBlink, 500);
     return () => {
       cancelled = true;
       clearTimeout(startTimer);
     };
-  }, [blinkMode, isReady, getFrameBlob, onCapture]);
+  }, [blinkMode, isReady, isActive, getFrameBlob, onCapture]);
 
   return (
     <div className="relative w-full max-w-2xl mx-auto rounded-md overflow-hidden bg-surface border border-border aspect-video flex items-center justify-center">
@@ -159,7 +169,7 @@ export function CameraCapture({ onCapture, onCancel, autoCaptureInterval, blinkM
           <canvas ref={canvasRef} className="hidden" />
           
           {/* Blink mode status overlay */}
-          {blinkMode && (
+          {blinkMode && isActive && (
             <div className="absolute bottom-0 left-0 right-0 z-20 bg-white/90 p-3 text-center">
               {blinkState === 'waiting' && (
                 <p className="text-[14px] text-muted flex items-center justify-center gap-2">
@@ -168,12 +178,34 @@ export function CameraCapture({ onCapture, onCancel, autoCaptureInterval, blinkM
               )}
               {blinkState === 'detecting' && (
                 <p className="text-[14px] text-foreground flex items-center justify-center gap-2">
-                  <Eye className="w-4 h-4 text-primary" /> Look at camera and blink to capture Face ID
+                  <Eye className="w-4 h-4 text-primary" /> Look at camera and blink...
                 </p>
               )}
               {blinkState === 'captured' && (
                 <p className="text-[14px] text-success flex items-center justify-center gap-2">
                   <CheckCircle className="w-4 h-4" /> Blink detected — Face ID captured!
+                </p>
+              )}
+            </div>
+          )}
+
+          {/* Start Scan Overlay */}
+          {!isActive && (blinkMode || autoCaptureInterval) && (
+            <div className="absolute inset-0 bg-black/60 z-30 flex flex-col items-center justify-center p-4 text-center">
+              <Camera className="w-12 h-12 text-white/50 mb-4" />
+              <button 
+                onClick={() => {
+                  blinkCapturedRef.current = false;
+                  setBlinkState('waiting');
+                  setIsActive(true);
+                }}
+                className="px-6 py-2.5 bg-primary hover:bg-primary-hover text-white rounded-md font-medium text-[14px] shadow-lg flex items-center gap-2"
+              >
+                <Eye className="w-4 h-4" /> Start Scan 
+              </button>
+              {blinkState === 'error' && (
+                <p className="mt-3 text-[12px] text-white bg-danger/80 px-3 py-1 rounded-full">
+                  Scan timed out. Please try again.
                 </p>
               )}
             </div>

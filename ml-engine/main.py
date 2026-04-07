@@ -66,6 +66,8 @@ async def register_face(file: UploadFile = File(...)):
     """
     Extract face embeddings from an image.
     The face becomes the user's unique Face ID.
+    Note: The frontend is responsible for capturing liveness (the actual blink) 
+    before sending the final open-eye frame to this endpoint.
     """
     if not HAS_ML_LIBS:
         return {"success": True, "embeddings": [0.1] * 128, "note": "MOCK_MODE"}
@@ -156,9 +158,8 @@ async def search_face(
     Uses FAISS (O(log N)) if available, otherwise naive search.
     """
     if not HAS_ML_LIBS:
-        gallery = json.loads(gallery_data)
-        user_id = gallery[0]["user_id"] if gallery else "unknown"
-        return {"success": True, "liveness_pass": True, "user_id": user_id, "note": "MOCK_MODE"}
+        # Prevent incorrect mock-logins by defaulting to unknown instead of the first user
+        return {"success": True, "liveness_pass": True, "user_id": "unknown", "note": "MOCK_MODE"}
 
     image_bytes = await file.read()
     try:

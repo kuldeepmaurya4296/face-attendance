@@ -5,6 +5,34 @@ import Leave from '@/models/Leave';
 import connectDB from '@/lib/db';
 import { auth, authorize } from '@/lib/auth';
 
+export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  try {
+    const authResult = await auth(req);
+    if (authResult.error) return NextResponse.json({ error: authResult.error }, { status: authResult.status });
+
+    if (!authorize(authResult.user, ['Owner', 'SuperAdmin', 'Admin'])) {
+      return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
+    }
+
+    await connectDB();
+    const resolvedParams = await params;
+    const { id } = resolvedParams;
+
+    const user = await User.findById(id).select('-password');
+    if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 });
+
+    const obj = user.toObject();
+    obj.has_face_id = !!(obj.face_embeddings && (Array.isArray(obj.face_embeddings) ? obj.face_embeddings.length > 0 : typeof obj.face_embeddings === 'string'));
+    
+    // We omit the raw embeddings for security/privacy, just show status
+    delete obj.face_embeddings;
+
+    return NextResponse.json(obj);
+  } catch (err: any) {
+    return NextResponse.json({ error: err.message }, { status: 500 });
+  }
+}
+
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const authResult = await auth(req);
@@ -19,7 +47,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     const { id } = resolvedParams;
     const body = await req.json();
     const { 
-      name, email, role, password, phone,
+      name, email, role, password, phone, face_embeddings,
       employee_id, designation, department, joining_date,
       roll_number, class_name, section, enrollment_year, parent_phone
     } = body;
@@ -41,8 +69,14 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     const updateFields: any = {};
     if (name) updateFields.name = name;
     if (email) updateFields.email = email;
-    if (password) updateFields.password = password; // Note: In production hashing is handled by pre-save or here
+    if (password) updateFields.password = password;
     if (phone !== undefined) updateFields.phone = phone;
+
+    // Face embeddings update (with encryption)
+    if (face_embeddings && Array.isArray(face_embeddings) && face_embeddings.length > 0) {
+      const { encryptEmbeddings } = await import('@/lib/services/encryption');
+      updateFields.face_embeddings = encryptEmbeddings(face_embeddings);
+    }
     
     // Auth role protection
     if (role && authResult.user.role === 'Owner') updateFields.role = role; 
@@ -64,7 +98,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       id,
       { $set: updateFields },
       { new: true, runValidators: true }
-    ).select('-password -face_embeddings');
+    ).select('-password');
 
     return NextResponse.json(user);
   } catch (err: any) {
