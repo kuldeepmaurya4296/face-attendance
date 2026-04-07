@@ -18,7 +18,12 @@ export default function TodayStatus() {
 
   const fetchStatus = () => {
     api.get('/attendance/status')
-      .then(res => { setStatus(res.data); setLoading(false); })
+      .then(res => { 
+        // Handle both standard axios response wrapper and our new { success: true, data: ... } wrapper
+        const responseData = res.data?.success && res.data?.data ? res.data.data : res.data;
+        setStatus(responseData); 
+        setLoading(false); 
+      })
       .catch(() => setLoading(false));
   };
 
@@ -55,7 +60,7 @@ export default function TodayStatus() {
     try {
       // Get gallery for face matching
       const galleryRes = await api.get(`/users/gallery/${user?.company_id}`);
-      const gallery = galleryRes.data;
+      const gallery = galleryRes.data?.success && galleryRes.data?.data ? galleryRes.data.data : galleryRes.data;
 
       const galleryData = gallery.map((p: any) => ({
         user_id: p.user_id,
@@ -179,6 +184,19 @@ export default function TodayStatus() {
       {/* Action Buttons */}
       {canSelfCheckin && !isCheckedOut && (
         <div className="space-y-3">
+          {isCheckedIn && status.can_checkout === false && (
+            <div className="flex items-start gap-3 p-3 bg-red-50 border border-red-200 rounded-md text-red-800">
+              <AlertTriangle size={16} className="mt-0.5" />
+              <div>
+                <p className="text-[13px] font-bold">Too Early to Checkout</p>
+                <p className="text-[12px] opacity-90">
+                  Minimum {status.min_checkout_hours}h required. Please wait another {status.remaining_minutes_for_checkout} minutes.
+                  Checking out now will result in an "Early Exit" marker.
+                </p>
+              </div>
+            </div>
+          )}
+
           {!showCamera ? (
             <button
               onClick={() => setShowCamera(true)}

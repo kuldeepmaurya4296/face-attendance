@@ -55,6 +55,8 @@ export interface CompanySettings {
   weekend_days: number[];
   auto_checkout_time: string;
   theme: string;
+  // NEW: Minimum hours before valid checkout
+  min_checkout_hours: number;
 }
 
 export interface LeavePolicy {
@@ -77,7 +79,7 @@ export interface ICompany {
 }
 
 // ---- Attendance ----
-export type AttendanceStatus = 'Present' | 'Absent' | 'Late' | 'Half-Day' | 'On-Leave' | 'Holiday' | 'Weekend' | 'Early-Departure';
+export type AttendanceStatus = 'Present' | 'Absent' | 'Late' | 'Half-Day' | 'On-Leave' | 'Holiday' | 'Weekend' | 'Early-Departure' | 'Early-Exit';
 export type AttendanceMode = 'SELF' | 'KIOSK' | 'MANUAL';
 
 export interface IAttendance {
@@ -96,6 +98,9 @@ export interface IAttendance {
   late_minutes: number;
   is_early_departure: boolean;
   early_departure_minutes: number;
+  // NEW
+  is_valid_checkout: boolean;
+  early_exit_reason?: string;
   notes?: string;
   createdAt?: string;
 }
@@ -151,7 +156,8 @@ export interface ILeaveBalance {
 
 // ---- API Response Types ----
 export interface ApiResponse<T> {
-  data: T;
+  success: boolean;
+  data?: T;
   message?: string;
   error?: string;
 }
@@ -171,6 +177,7 @@ export interface DailySummary {
   late: number;
   half_day: number;
   early_departure: number;
+  early_exit: number;
   on_leave: number;
   absent: number;
   not_checked_in: Array<{ name: string; email: string; department?: string; role: string }>;
@@ -188,6 +195,7 @@ export interface MonthlyCalendarDay {
   is_late?: boolean;
   late_minutes?: number;
   is_overtime?: boolean;
+  is_valid_checkout?: boolean;
   mode?: AttendanceMode;
   holiday_name?: string;
   is_today?: boolean;
@@ -235,10 +243,17 @@ export interface TodayStatusData {
   is_late?: boolean;
   late_minutes?: number;
   work_hours?: number;
+  elapsed_hours?: number;
+  is_valid_checkout?: boolean;
+  early_exit_reason?: string;
   shift_start: string;
   shift_end: string;
   allow_self_checkin: boolean;
   attendance_mode: string;
+  // NEW
+  min_checkout_hours: number;
+  can_checkout: boolean;
+  remaining_minutes_for_checkout?: number;
 }
 
 // ---- Form Data Types ----
@@ -269,4 +284,34 @@ export interface LeaveApplicationFormData {
   to_date: string;
   reason: string;
   leave_type: LeaveType;
+}
+
+// ---- Attendance Engine Types ----
+export interface AttendanceEngineConfig {
+  shift_start: string;        // "09:00"
+  shift_end: string;          // "18:00"
+  late_threshold_minutes: number;
+  early_departure_threshold_minutes: number;
+  full_day_hours: number;
+  half_day_hours: number;
+  overtime_threshold_hours: number;
+  min_checkout_hours: number;
+  org_type: OrgType;
+}
+
+export interface CheckInResult {
+  status: AttendanceStatus;
+  is_late: boolean;
+  late_minutes: number;
+}
+
+export interface CheckOutResult {
+  status: AttendanceStatus;
+  work_hours: number;
+  is_overtime: boolean;
+  overtime_hours: number;
+  is_early_departure: boolean;
+  early_departure_minutes: number;
+  is_valid_checkout: boolean;
+  early_exit_reason: string;
 }

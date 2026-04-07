@@ -13,14 +13,16 @@ export async function auth(req: NextRequest) {
     }
 
     const token = authHeader.split(' ')[1];
-    const decoded = jwt.verify(token, JWT_SECRET) as { id: string; role: string; company_id: string };
+    const decoded = jwt.verify(token, JWT_SECRET) as { id: string; role: string; company_id: string; org_type?: string };
 
     await connectDB();
-    const user = await User.findById(decoded.id).select('-password');
+    const userDoc = await User.findById(decoded.id).select('-password');
 
-    if (!user) {
+    if (!userDoc) {
       return { error: 'User not found', status: 401 };
     }
+
+    const user = { ...userDoc.toObject(), org_type: decoded.org_type };
 
     return { user, status: 200 };
   } catch (err) {

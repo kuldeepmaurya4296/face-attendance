@@ -17,7 +17,9 @@ const companySchema = new mongoose.Schema({
     overtime_threshold_hours: { type: Number, default: 9 },
     weekend_days: { type: [Number], default: [0, 6] },
     auto_checkout_time: { type: String, default: '' },
-    theme: { type: String, enum: ['Aura', 'Midnight', 'Emerald', 'Oceanic', 'Sunset'], default: 'Aura' }
+    theme: { type: String, enum: ['Aura', 'Midnight', 'Emerald', 'Oceanic', 'Sunset'], default: 'Aura' },
+    // === NEW: Minimum hours before valid checkout ===
+    min_checkout_hours: { type: Number, default: 3 },
   },
   admin_permissions: {
     manage_personnel: { type: Boolean, default: true },

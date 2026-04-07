@@ -8,7 +8,7 @@ const attendanceSchema = new mongoose.Schema({
   check_out: { type: Date },
   status: {
     type: String,
-    enum: ['Present', 'Absent', 'Late', 'Half-Day', 'On-Leave', 'Holiday', 'Weekend', 'Early-Departure'],
+    enum: ['Present', 'Absent', 'Late', 'Half-Day', 'On-Leave', 'Holiday', 'Weekend', 'Early-Departure', 'Early-Exit'],
     default: 'Present'
   },
   mode: { type: String, enum: ['SELF', 'KIOSK', 'MANUAL'], required: true },
@@ -19,6 +19,11 @@ const attendanceSchema = new mongoose.Schema({
   late_minutes: { type: Number, default: 0 },
   is_early_departure: { type: Boolean, default: false },
   early_departure_minutes: { type: Number, default: 0 },
+
+  // === NEW: Minimum work hours / early exit tracking ===
+  is_valid_checkout: { type: Boolean, default: true },
+  early_exit_reason: { type: String, default: '' },
+
   notes: { type: String },
   createdAt: { type: Date, default: Date.now }
 });
@@ -26,5 +31,7 @@ const attendanceSchema = new mongoose.Schema({
 attendanceSchema.index({ user_id: 1, date: 1 }, { unique: true });
 attendanceSchema.index({ company_id: 1, date: -1 });
 attendanceSchema.index({ company_id: 1, date: -1, status: 1 });
+// NEW: Optimized lookup for user attendance by date range
+attendanceSchema.index({ user_id: 1, company_id: 1, date: -1 });
 
 export default mongoose.models.Attendance || mongoose.model('Attendance', attendanceSchema);

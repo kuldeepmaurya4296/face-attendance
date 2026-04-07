@@ -102,7 +102,11 @@ export default function CompanySettingsPage() {
                     <label className="text-[12px] font-medium text-muted">Half Day (hours)</label>
                     <input type="number" step="0.5" value={settings.half_day_hours} onChange={e => setSettings({...settings, half_day_hours: Number(e.target.value)})} className="w-full bg-surface border border-border rounded-md p-2 outline-none focus:border-primary text-[14px]" />
                   </div>
-                  <div className="space-y-1 col-span-2">
+                  <div className="space-y-1">
+                    <label className="text-[12px] font-medium text-muted">Min Checkout (hours)</label>
+                    <input type="number" step="0.5" value={settings.min_checkout_hours || 3} onChange={e => setSettings({...settings, min_checkout_hours: Number(e.target.value)})} className="w-full bg-surface border border-border rounded-md p-2 outline-none focus:border-primary text-[14px]" />
+                  </div>
+                  <div className="space-y-1">
                     <label className="text-[12px] font-medium text-muted">Overtime Threshold (hours)</label>
                     <input type="number" step="0.5" value={settings.overtime_threshold_hours} onChange={e => setSettings({...settings, overtime_threshold_hours: Number(e.target.value)})} className="w-full bg-surface border border-border rounded-md p-2 outline-none focus:border-primary text-[14px]" />
                   </div>

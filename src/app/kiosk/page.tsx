@@ -66,7 +66,7 @@ export default function KioskMode() {
     try {
       // 1. Get gallery
       const galleryRes = await api.get(`/users/gallery/${selectedCompanyId}`);
-      const gallery = galleryRes.data;
+      const gallery = galleryRes.data?.success && galleryRes.data?.data ? galleryRes.data.data : galleryRes.data;
 
       // 2. Perform ML Search
       const formData = new FormData();

@@ -10,7 +10,7 @@ const userSchema = new mongoose.Schema({
     default: 'User' 
   },
   company_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Company' },
-  face_embeddings: { type: [Number] },
+  face_embeddings: { type: mongoose.Schema.Types.Mixed }, // Changed to Mixed to support encrypted Base64 strings and legacy arrays
 
   // === Common Fields ===
   phone: { type: String },

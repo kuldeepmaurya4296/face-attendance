@@ -3,6 +3,7 @@ import json
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
+from vector_db import FaceVectorDB, HAS_FAISS
 
 # Load `.env` from the project root instead of this directory
 load_dotenv(os.path.join(os.path.dirname(__file__), '..', '.env'))
@@ -23,6 +24,7 @@ try:
     from blink_logic import detect_blink
     HAS_ML_LIBS = True
     print("OK: ML Libraries (face_recognition, mediapipe) loaded successfully.")
+    print(f"FAISS Status: {'LOADED' if HAS_FAISS else 'NOT LOADED - falling back to naive search'}")
 except ImportError as e:
     HAS_ML_LIBS = False
     print(f"!!! ML Libraries missing: {e}. Running in MOCK MODE.")
@@ -30,11 +32,15 @@ except ImportError as e:
 BLINK_THRESH = float(os.getenv("BLINK_RATIO_THRESHOLD", 0.21))
 CONFIDENCE_THRESH = float(os.getenv("MODEL_CONFIDENCE_THRESHOLD", 0.85))
 
+# Setup Vector DB
+vector_db = FaceVectorDB()
+
 @app.get("/api/ml/health")
 def health_check():
     return {
         "status": "ML Engine is running.",
-        "mode": "REAL" if HAS_ML_LIBS else "MOCK"
+        "mode": "REAL" if HAS_ML_LIBS else "MOCK",
+        "faiss_enabled": HAS_FAISS
     }
 
 
@@ -43,7 +49,6 @@ async def detect_blink_endpoint(file: UploadFile = File(...)):
     """
     Check if the submitted frame contains a blink.
     Used by frontend to know when to auto-capture for Face ID.
-    Returns: { blinked: true/false }
     """
     if not HAS_ML_LIBS:
         return {"blinked": True, "note": "MOCK_MODE"}
@@ -80,8 +85,6 @@ async def check_duplicate_face(
 ):
     """
     Check if a face already exists in the gallery (duplicate prevention).
-    gallery_data: JSON string of format [{"user_id": "...", "embeddings": [...]}, ...]
-    Returns: { duplicate: true/false, matched_user_id: "..." or null }
     """
     if not HAS_ML_LIBS:
         return {"duplicate": False, "matched_user_id": None, "note": "MOCK_MODE"}
@@ -90,14 +93,27 @@ async def check_duplicate_face(
     try:
         gallery = json.loads(gallery_data)
         current_embed = get_face_embeddings(image_bytes)
-        tolerance = 1.0 - CONFIDENCE_THRESH
+        
+        # Stricter tolerance for duplication (95% similarity match)
+        dup_tolerance = 1.0 - max(CONFIDENCE_THRESH, 0.95)
 
-        for item in gallery:
-            if compare_faces(item["embeddings"], current_embed, tolerance=tolerance):
+        if HAS_FAISS:
+            vector_db.build_index(gallery)
+            match = vector_db.search(current_embed, tolerance=dup_tolerance)
+            if match:
                 return {
                     "duplicate": True,
-                    "matched_user_id": item["user_id"]
+                    "matched_user_id": match["user_id"]
                 }
+            return {"duplicate": False, "matched_user_id": None}
+        else:
+            # Naive fallback
+            for item in gallery:
+                if compare_faces(item["embeddings"], current_embed, tolerance=dup_tolerance):
+                    return {
+                        "duplicate": True,
+                        "matched_user_id": item["user_id"]
+                    }
 
         return {"duplicate": False, "matched_user_id": None}
     except Exception as e:
@@ -110,8 +126,7 @@ async def verify_face(
     known_embeddings: str = Form(...) 
 ):
     """
-    Used for SELF MODE (Verification). 
-    Matches 1 unknown face against 1 known face (or list for that user).
+    Used for SELF MODE (Verification). 1:1 match.
     """
     if not HAS_ML_LIBS:
         return {"success": True, "liveness_pass": True, "face_match": True, "note": "MOCK_MODE"}
@@ -134,12 +149,11 @@ async def search_face(
     gallery_data: str = Form(...) 
 ):
     """
-    Used for KIOSK MODE (Identification).
+    Used for KIOSK MODE (Identification). 1:N match.
     Matches 1 unknown face against a gallery of all users in the company.
-    gallery_data: JSON string of format [{"user_id": "...", "embeddings": [...]}, ...]
+    Uses FAISS (O(log N)) if available, otherwise naive search.
     """
     if not HAS_ML_LIBS:
-        # Mock: match the first user in the gallery for demo
         gallery = json.loads(gallery_data)
         user_id = gallery[0]["user_id"] if gallery else "unknown"
         return {"success": True, "liveness_pass": True, "user_id": user_id, "note": "MOCK_MODE"}
@@ -152,10 +166,18 @@ async def search_face(
         tolerance = 1.0 - CONFIDENCE_THRESH
 
         matched_user_id = None
-        for item in gallery:
-            if compare_faces(item["embeddings"], current_embed, tolerance=tolerance):
-                matched_user_id = item["user_id"]
-                break
+        
+        if HAS_FAISS:
+            vector_db.build_index(gallery)
+            match = vector_db.search(current_embed, tolerance=tolerance)
+            if match:
+                matched_user_id = match["user_id"]
+        else:
+            # Naive search fallback
+            for item in gallery:
+                if compare_faces(item["embeddings"], current_embed, tolerance=tolerance):
+                    matched_user_id = item["user_id"]
+                    break
 
         return {
             "success": True,
