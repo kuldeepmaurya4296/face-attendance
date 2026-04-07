@@ -79,10 +79,19 @@ export default function Sidebar() {
       
       {/* Brand */}
       <div className="p-6 border-b border-sidebar-border">
-        <h1 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary to-secondary">
-          Aura Vision
-        </h1>
-        <p className="text-[12px] font-medium text-sidebar-foreground/60 mt-1 uppercase tracking-wide">
+        <div className="flex items-center gap-3">
+          {user.branding?.logo_url ? (
+            <img src={user.branding.logo_url} className="w-8 h-8 object-contain" alt="Logo" />
+          ) : (
+            <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
+               <Shield size={18} />
+            </div>
+          )}
+          <h1 className="text-[18px] font-black tracking-tighter bg-clip-text text-transparent bg-gradient-to-r from-primary to-primary/60 truncate">
+            {user.branding?.brand_name || 'Aura Vision'}
+          </h1>
+        </div>
+        <p className="text-[11px] font-black text-sidebar-foreground/40 mt-1 uppercase tracking-widest pl-1">
           {user.role} Portal
         </p>
       </div>

@@ -16,12 +16,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 });
     }
 
-    // Fetch company to get org_type and admin_permissions
+    // Fetch company to get org_type, admin_permissions, and branding
     let org_type = null;
     let admin_permissions = null;
+    let branding = null;
     if (user.company_id) {
       const company = await Company.findById(user.company_id);
       org_type = company?.org_type || null;
+      branding = company?.settings?.branding || null;
       if (user.role === 'Admin') {
         admin_permissions = company?.admin_permissions || null;
       }
@@ -40,7 +42,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       message: 'Login successful',
       token,
-      user: { ...userObj, org_type, admin_permissions }
+      user: { ...userObj, org_type, admin_permissions, branding }
     });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });

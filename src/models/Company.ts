@@ -18,7 +18,17 @@ const companySchema = new mongoose.Schema({
     weekend_days: { type: [Number], default: [0, 6] },
     auto_checkout_time: { type: String, default: '' },
     theme: { type: String, enum: ['Aura', 'Midnight', 'Emerald', 'Oceanic', 'Sunset'], default: 'Aura' },
-    // === NEW: Minimum hours before valid checkout ===
+    // === Branding Customization ===
+    branding: {
+      brand_name: { type: String },
+      primary_color: { type: String, default: '#2563eb' },
+      secondary_color: { type: String, default: '#7c3aed' },
+      accent_color: { type: String, default: '#10b981' },
+      background_color: { type: String, default: '#ffffff' },
+      text_color: { type: String, default: '#1a1a1a' },
+      logo_url: { type: String },
+    },
+    // === Minimum hours before valid checkout ===
     min_checkout_hours: { type: Number, default: 3 },
   },
   admin_permissions: {

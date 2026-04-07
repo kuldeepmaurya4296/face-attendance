@@ -17,15 +17,22 @@ export default function PlatformOverview() {
   const [loading, setLoading] = useState(true);
   const [selectedCompany, setSelectedCompany] = useState<any>(null);
 
-  useEffect(() => {
-    Promise.all([
-      api.get('/companies'),
-      api.get('/users'),
-    ]).then(([compRes, usersRes]) => {
+  const fetchData = async () => {
+    try {
+      const [compRes, usersRes] = await Promise.all([
+        api.get('/companies'),
+        api.get('/users'),
+      ]);
       setCompanies(compRes.data || []);
       setAllUsers(usersRes.data || []);
       setLoading(false);
-    }).catch(() => setLoading(false));
+    } catch {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchData();
   }, []);
 
   const stats = useMemo(() => ({
@@ -177,6 +184,7 @@ export default function PlatformOverview() {
         <OrganizationDetailsModal 
           company={selectedCompany} 
           onClose={() => setSelectedCompany(null)} 
+          onRefresh={fetchData}
         />
       )}
     </div>

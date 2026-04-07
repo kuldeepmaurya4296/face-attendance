@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import api from '@/lib/api';
 
 export type Role = 'Owner' | 'SuperAdmin' | 'Admin' | 'User';
 
@@ -28,6 +29,15 @@ export interface User {
   company_id?: string;
   org_type?: 'Company' | 'Institute';
   admin_permissions?: AdminPermissions;
+  branding?: {
+    brand_name?: string;
+    primary_color?: string;
+    secondary_color?: string;
+    accent_color?: string;
+    background_color?: string;
+    text_color?: string;
+    logo_url?: string;
+  };
 }
 
 interface AuthContextType {
@@ -61,7 +71,21 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     if (savedToken && savedUser && savedUser !== 'undefined') {
       try {
         setToken(savedToken);
-        setUser(JSON.parse(savedUser));
+        const parsedUser = JSON.parse(savedUser);
+        setUser(parsedUser);
+
+        // Async sync of the latest branding from the database
+        if (parsedUser.company_id) {
+          api.get(`/companies/${parsedUser.company_id}`).then(res => {
+            if (res.data?.settings?.branding) {
+              const updatedUser = { ...parsedUser, branding: res.data.settings.branding };
+              setUser(updatedUser);
+              localStorage.setItem('user', JSON.stringify(updatedUser));
+            }
+          }).catch(err => {
+            console.error('Failed to sync latest branding on load', err);
+          });
+        }
       } catch (err) {
         localStorage.removeItem('user');
         localStorage.removeItem('token');

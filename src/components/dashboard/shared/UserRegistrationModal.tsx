@@ -65,9 +65,9 @@ export default function UserRegistrationModal({ onClose, onRefresh, editUser }: 
         }
         embeddings = mlData.embeddings;
 
-        // 2. Check for duplicate face (only if updating face)
-        const galleryRes = await api.get(`/users/gallery/${currentUser?.company_id}`);
-        const gallery = galleryRes.data?.success && galleryRes.data?.data ? galleryRes.data.data : galleryRes.data;
+        // 2. Check for GLOBAL duplicate face (One Person, One Face ID)
+        const galleryRes = await api.get('/auth/system-gallery');
+        const gallery = galleryRes.data;
         
         if (gallery && gallery.length > 0) {
           const dupForm = new FormData();
@@ -78,7 +78,7 @@ export default function UserRegistrationModal({ onClose, onRefresh, editUser }: 
           const dupData = await dupRes.json();
           
           if (dupData.duplicate && dupData.matched_user_id !== editUser?._id) {
-            setError(`Face already registered to another account.`);
+            setError(`Face ID already assigned to another identity. One person, one Face ID.`);
             setLoading(false);
             return;
           }

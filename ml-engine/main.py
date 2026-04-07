@@ -94,13 +94,14 @@ async def check_duplicate_face(
         gallery = json.loads(gallery_data)
         current_embed = get_face_embeddings(image_bytes)
         
-        # Stricter tolerance for duplication (95% similarity match)
-        dup_tolerance = 1.0 - max(CONFIDENCE_THRESH, 0.95)
+        # Biometric duplication threshold: 0.4 is standard for "Same Person"
+        dup_tolerance = 0.4
 
         if HAS_FAISS:
             vector_db.build_index(gallery)
             match = vector_db.search(current_embed, tolerance=dup_tolerance)
             if match:
+                print(f"DUPLICATE_DETECTED: Match with user_id: {match['user_id']}")
                 return {
                     "duplicate": True,
                     "matched_user_id": match["user_id"]
@@ -110,6 +111,7 @@ async def check_duplicate_face(
             # Naive fallback
             for item in gallery:
                 if compare_faces(item["embeddings"], current_embed, tolerance=dup_tolerance):
+                    print(f"DUPLICATE_DETECTED: Naive match with user_id: {item['user_id']}")
                     return {
                         "duplicate": True,
                         "matched_user_id": item["user_id"]

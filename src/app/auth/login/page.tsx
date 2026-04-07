@@ -57,15 +57,26 @@ export default function LoginPage() {
       formData.append('file', file);
       formData.append('gallery_data', JSON.stringify(galleryData));
 
-      const mlRes = await fetch(process.env.NEXT_PUBLIC_ML_SERVICE_URL + '/api/ml/search', {
+      const mlRes = await fetch('/api/ml/search', {
         method: 'POST', body: formData
       });
       const mlData = await mlRes.json();
 
-      if (!mlData.user_id || mlData.user_id === "unknown") {
-        setError('Face not recognized. Please try again or use password login.');
+      if (!mlRes.ok) {
+        setError(mlData.detail || 'Biometric analysis failed.');
         setLoading(false);
-        setLoginMode('password');
+        return;
+      }
+
+      if (!mlData.user_id || mlData.user_id === "unknown") {
+        setError('Face not recognized. Please ensure you are in a well-lit area.');
+        setLoading(false);
+        return;
+      }
+
+      if (!mlData.liveness_pass) {
+        setError('Liveness check failed. Please blink while facing the camera.');
+        setLoading(false);
         return;
       }
 

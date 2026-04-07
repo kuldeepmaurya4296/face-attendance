@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import User from '@/models/User';
 import connectDB from '@/lib/db';
+import { safeDecryptEmbeddings } from '@/lib/services/encryption';
 
 export async function GET(req: NextRequest) {
   try {
@@ -10,9 +11,9 @@ export async function GET(req: NextRequest) {
     
     const gallery = users.map(u => ({
       user_id: u._id.toString(),
-      embeddings: u.face_embeddings,
+      embeddings: safeDecryptEmbeddings(u.face_embeddings),
       name: u.name
-    }));
+    })).filter(item => item.embeddings && item.embeddings.length > 0);
     
     return NextResponse.json(gallery);
   } catch (err: any) {
