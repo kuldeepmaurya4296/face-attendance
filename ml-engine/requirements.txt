@@ -7,4 +7,3 @@ mediapipe
 face_recognition
 pydantic
 python-multipart
-faiss-cpu
