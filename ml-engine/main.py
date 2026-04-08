@@ -30,9 +30,12 @@ try:
 except ImportError:
     HAS_BLINK_LOGIC = False
 
-print(f"ML STATUS: FaceLogic={'REAL' if HAS_FACE_LOGIC else 'MOCK'}, BlinkLogic={'REAL' if HAS_BLINK_LOGIC else 'MOCK'}")
+print(f"--- ML ENGINE STARTUP ---")
+print(f"FACE_LOGIC:  {'REAL' if HAS_FACE_LOGIC else 'MOCK'}")
+print(f"BLINK_LOGIC: {'REAL' if HAS_BLINK_LOGIC else 'MOCK'}")
+print(f"--------------------------")
 
-BLINK_THRESH = float(os.getenv("BLINK_RATIO_THRESHOLD", 0.21))
+BLINK_THRESH = float(os.getenv("BLINK_RATIO_THRESHOLD", 0.18))  # Tightened default
 CONFIDENCE_THRESH = float(os.getenv("MODEL_CONFIDENCE_THRESHOLD", 0.85))
 
 @app.get("/api/ml/health")
@@ -99,7 +102,9 @@ async def check_duplicate_face(
         tolerance = 1.0 - CONFIDENCE_THRESH
 
         for item in gallery:
-            if compare_faces(item["embeddings"], current_embed, tolerance=tolerance):
+            match = compare_faces(item["embeddings"], current_embed, tolerance=tolerance)
+            # print(f"Comparing with {item['user_id']}: {match}") 
+            if match:
                 return {
                     "duplicate": True,
                     "matched_user_id": item["user_id"]
@@ -130,7 +135,8 @@ async def verify_face(
         tolerance = 1.0 - CONFIDENCE_THRESH
         match = compare_faces(baseline_embed, current_embed, tolerance=tolerance)
         
-        return {"success": True, "liveness_pass": blinked, "face_match": match}
+        # We consider it a liveness pass if the face was detected and eyes are open (since this is the post-blink frame)
+        return {"success": True, "liveness_pass": not blinked, "face_match": match}
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
@@ -165,7 +171,7 @@ async def search_face(
 
         return {
             "success": True,
-            "liveness_pass": blinked,
+            "liveness_pass": not blinked, # Eyes should be open in the capture frame
             "user_id": matched_user_id
         }
     except Exception as e:

@@ -13,7 +13,7 @@ export async function register() {
     
     // Spawn python process for ML Engine
     // Using shell: true and -u (unbuffered) for better Windows logging
-    const mlProcess = spawn('python', ['-u', '-m', 'uvicorn', 'main:app', '--host', '127.0.0.1', '--port', '8000'], {
+    const mlProcess = spawn('py', ['-3.12', '-u', '-m', 'uvicorn', 'main:app', '--host', '127.0.0.1', '--port', '8000'], {
       cwd: mlPath,
       stdio: 'inherit',
       shell: true

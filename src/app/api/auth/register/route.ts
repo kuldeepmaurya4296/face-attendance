@@ -7,6 +7,8 @@ import { registerUserSchema, validateInput } from '@/lib/validators';
 import { encryptEmbeddings } from '@/lib/services/encryption';
 import { checkRateLimit, getClientIp, RATE_LIMITS } from '@/lib/middleware/rate-limit';
 import { securityLog, appLog } from '@/lib/services/logger';
+import { MLService } from '@/lib/services/ml-service';
+import { safeDecryptEmbeddings } from '@/lib/services/encryption';
 
 export async function POST(req: NextRequest) {
   try {
@@ -58,13 +60,49 @@ export async function POST(req: NextRequest) {
     }
 
     // --- ML INTEGRATION: Server-side Duplicate Check ---
-    // We already do this on the frontend, but server-side is more secure.
-    // If the frontend sends the base64 image, we can use it to check duplicates against the whole system.
-    /*
+    // This ensures "One Person, One Face" policy.
     if (face_image) {
-       // logic to call MLService.checkDuplicate...
+      try {
+        // 1. Fetch all users with face IDs
+        const allUsers = await User.find({ 
+          face_embeddings: { $exists: true, $type: "string", $ne: "" } 
+        }).select('_id face_embeddings');
+        
+        console.log(`[AUTH_REGISTER] Total users with Face ID in system: ${allUsers.length}`);
+
+        // 2. Decrypt gallery
+        const gallery = allUsers.map(u => ({
+          user_id: u._id.toString(),
+          embeddings: safeDecryptEmbeddings(u.face_embeddings)
+        })).filter(g => g.embeddings && g.embeddings.length > 0);
+
+        console.log(`[AUTH_REGISTER] Gallery size after decryption: ${gallery.length}`);
+
+        if (gallery.length > 0) {
+          // 3. Convert base64 image to Blob
+          const base64Data = face_image.includes(',') ? face_image.split(',')[1] : face_image;
+          const imageBuffer = Buffer.from(base64Data, 'base64');
+          const imageBlob = new Blob([imageBuffer], { type: 'image/jpeg' });
+
+          // 4. Check for duplicates via ML Engine
+          const dupResult = await MLService.checkDuplicate(imageBlob, gallery);
+          
+          console.log(`[AUTH_REGISTER] Duplicate check result:`, dupResult);
+
+          if (dupResult.duplicate) {
+            securityLog.authFailure(`Duplicate face registration attempt. Matched user: ${dupResult.matched_user_id}`, ip);
+            return NextResponse.json({ 
+              success: false, 
+              error: 'This face is already registered to another user. Each person can only have one account.' 
+            }, { status: 400 });
+          }
+        }
+      } catch (mlErr: any) {
+        appLog.error('ML_DUPLICATE_CHECK_ERROR', { error: mlErr.message });
+        // We continue if ML Service is down, but ideally it should be up.
+        // In a production strict mode, you might want to block registration if check fails.
+      }
     }
-    */
 
     // ENCRYPT EMBEDDINGS BEFORE SAVING
     const encryptedEmbeddings = encryptEmbeddings(face_embeddings);

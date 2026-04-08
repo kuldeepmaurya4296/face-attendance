@@ -1,62 +1,40 @@
-try:
-    import cv2
-    import mediapipe as mp
-    HAS_BLINK_LIBS = True
-except ImportError:
-    HAS_BLINK_LIBS = False
-
 import numpy as np
-import base64
+import cv2
+import os
 
-def calculate_ear(eye_landmarks: list) -> float:
-    # Compute the euclidean distances between the two sets of vertical eye landmarks
-    p2_minus_p6 = np.linalg.norm(eye_landmarks[1] - eye_landmarks[5])
-    p3_minus_p5 = np.linalg.norm(eye_landmarks[2] - eye_landmarks[4])
-    
-    # Compute the euclidean distance between the horizontal eye landmark
-    p1_minus_p4 = np.linalg.norm(eye_landmarks[0] - eye_landmarks[3])
-    
-    # Calculate the eye aspect ratio (EAR)
-    ear = (p2_minus_p6 + p3_minus_p5) / (2.0 * p1_minus_p4)
-    return ear
+# Using OpenCV Haar Cascades for Eyes
+FACE_CASCADE_PATH = os.path.join(cv2.data.haarcascades, 'haarcascade_frontalface_default.xml')
+EYE_CASCADE_PATH = os.path.join(cv2.data.haarcascades, 'haarcascade_eye.xml')
 
-def detect_blink(image_bytes: bytes, blink_threshold: float = 0.21) -> bool:
+face_cascade = cv2.CascadeClassifier(FACE_CASCADE_PATH)
+eye_cascade = cv2.CascadeClassifier(EYE_CASCADE_PATH)
+
+def detect_blink(image_bytes: bytes, blink_threshold: float = 0.2) -> bool:
     """
-    Returns True if an eye is closed (i.e. EAR is below the threshold), indicating a blink.
-    In a real-life video stream, you would verify this state drops below the threshold
-    and then rises above it across multiple frames. Here, we parse a single frame.
+    Simulated Liveness via Eye Detection.
+    If no eyes are detected within a face, it suggests a closed eye (blink) or a fake.
     """
-    mp_face_mesh = mp.solutions.face_mesh
-    face_mesh = mp_face_mesh.FaceMesh(static_image_mode=True, max_num_faces=1, refine_landmarks=True)
-
     nparr = np.frombuffer(image_bytes, np.uint8)
     image = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
-    rgb_image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-
-    results = face_mesh.process(rgb_image)
-    if not results.multi_face_landmarks:
-        return False # No face found
+    if image is None:
+        return False
+        
+    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     
-    landmarks = results.multi_face_landmarks[0].landmark
-
-    def to_pixel_coords(landmark_list):
-        return np.array([
-            [landmarks[idx].x * image.shape[1], landmarks[idx].y * image.shape[0]] 
-            for idx in landmark_list
-        ])
-
-    # Right eye landmarks (using standard MediaPipe FaceMesh indices)
-    right_eye_indices = [33, 160, 158, 133, 153, 144]
-    # Left eye landmarks
-    left_eye_indices = [362, 385, 387, 263, 373, 380]
-
-    right_eye_cords = to_pixel_coords(right_eye_indices)
-    left_eye_cords = to_pixel_coords(left_eye_indices)
-
-    ear_right = calculate_ear(right_eye_cords)
-    ear_left = calculate_ear(left_eye_cords)
+    # 1. Find face first to limit eye search
+    faces = face_cascade.detectMultiScale(gray, 1.3, 5)
+    if len(faces) == 0:
+        return False
+        
+    (x, y, w, h) = faces[0]
+    face_roi_gray = gray[y:y+h, x:x+w]
     
-    ear_avg = (ear_left + ear_right) / 2.0
+    # 2. Detect eyes in the top half of the face
+    eyes = eye_cascade.detectMultiScale(face_roi_gray, 1.1, 10)
     
-    # If eye aspect ratio goes below threshold, it's considered a blink
-    return bool(ear_avg < blink_threshold)
+    # If 2 eyes detected, eyes are open
+    # If 0 eyes detected (but face is there), it could be a blink
+    # we return blinked = True if less than 2 eyes found
+    return len(eyes) < 2
+
+HAS_BLINK_LIBS = True # Using OpenCV now

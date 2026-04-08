@@ -158,11 +158,19 @@ export default function DashboardLayout({ params }: { params: Promise<{ role: st
       }
 
       // Step 3: Register the user
+      // Convert File to Base64 for the backend to perform its own duplicate check
+      const reader = new FileReader();
+      const faceImageBase64 = await new Promise<string>((resolve) => {
+        reader.onload = () => resolve(reader.result as string);
+        reader.readAsDataURL(userFace);
+      });
+
       await api.post('/auth/register', {
         ...userData, 
         company_id: user?.company_id, 
         face_embeddings: mlData.embeddings, 
-        department: userData.department
+        department: userData.department,
+        face_image: faceImageBase64
       });
 
       alert(`${userData.role} successfully registered.`);

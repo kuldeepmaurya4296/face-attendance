@@ -101,12 +101,12 @@ export function isEncrypted(data: any): boolean {
  * Safe decrypt: handles both encrypted strings and legacy raw arrays.
  */
 export function safeDecryptEmbeddings(data: any): number[] {
-  if (Array.isArray(data)) {
-    // Legacy unencrypted array — return directly
-    return data;
-  }
-  if (typeof data === 'string') {
-    return decryptEmbeddings(data);
+  try {
+    if (typeof data === 'string') {
+      return decryptEmbeddings(data);
+    }
+  } catch (err: any) {
+    console.error(`[ENCRYPTION_SAFE_DECRYPT_ERROR] ${err.message}`);
   }
   return [];
 }
