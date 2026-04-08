@@ -1,5 +1,10 @@
-import cv2
-import mediapipe as mp
+try:
+    import cv2
+    import mediapipe as mp
+    HAS_BLINK_LIBS = True
+except ImportError:
+    HAS_BLINK_LIBS = False
+
 import numpy as np
 import base64
 

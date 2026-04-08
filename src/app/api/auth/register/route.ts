@@ -42,7 +42,8 @@ export async function POST(req: NextRequest) {
       name, email, password, role, face_embeddings,
       phone,
       employee_id, designation, department, joining_date,
-      roll_number, class_name, section, enrollment_year, parent_phone
+      roll_number, class_name, section, enrollment_year, parent_phone,
+      face_image // Optional: if provided, we can re-verify on server
     } = validation.data;
 
     const company_id = authResult.user.company_id;
@@ -55,6 +56,15 @@ export async function POST(req: NextRequest) {
     if (!face_embeddings || face_embeddings.length === 0) {
       return NextResponse.json({ success: false, error: 'Face ID is required for registration.' }, { status: 400 });
     }
+
+    // --- ML INTEGRATION: Server-side Duplicate Check ---
+    // We already do this on the frontend, but server-side is more secure.
+    // If the frontend sends the base64 image, we can use it to check duplicates against the whole system.
+    /*
+    if (face_image) {
+       // logic to call MLService.checkDuplicate...
+    }
+    */
 
     // ENCRYPT EMBEDDINGS BEFORE SAVING
     const encryptedEmbeddings = encryptEmbeddings(face_embeddings);

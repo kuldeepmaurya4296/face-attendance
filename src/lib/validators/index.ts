@@ -20,13 +20,13 @@ export const markAttendanceSchema = z.object({
 // ─── Auth ────────────────────────────────────────────────
 
 export const loginSchema = z.object({
-  email: z.string().email('Invalid email format'),
+  email: z.string().email('Invalid email format').trim().toLowerCase(),
   password: z.string().min(1, 'Password is required'),
 });
 
 export const registerUserSchema = z.object({
   name: z.string().min(1, 'Name is required').max(100),
-  email: z.string().email('Invalid email format'),
+  email: z.string().email('Invalid email format').trim().toLowerCase(),
   password: z.string().min(6, 'Password must be at least 6 characters'),
   role: z.enum(['Admin', 'User']).optional().default('User'),
   face_embeddings: z.array(z.number()).optional(),
@@ -42,6 +42,7 @@ export const registerUserSchema = z.object({
   section: z.string().optional(),
   enrollment_year: z.number().optional(),
   parent_phone: z.string().optional(),
+  face_image: z.string().optional(),
 });
 
 // ─── Company Settings ────────────────────────────────────

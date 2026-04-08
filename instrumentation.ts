@@ -12,10 +12,11 @@ export async function register() {
     console.log('⚙️ Initializing ML Engine sidecar from:', mlPath);
     
     // Spawn python process for ML Engine
-    const mlProcess = spawn('python', ['-m', 'uvicorn', 'main:app', '--host', '127.0.0.1', '--port', '8000', '--reload'], {
+    // Using shell: true and -u (unbuffered) for better Windows logging
+    const mlProcess = spawn('python', ['-u', '-m', 'uvicorn', 'main:app', '--host', '127.0.0.1', '--port', '8000'], {
       cwd: mlPath,
       stdio: 'inherit',
-      shell: false
+      shell: true
     });
     
     // Handle cleanup to prevent zombie processes

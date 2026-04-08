@@ -1,4 +1,9 @@
-import face_recognition
+try:
+    import face_recognition
+    HAS_FACE_REC = True
+except ImportError:
+    HAS_FACE_REC = False
+
 import numpy as np
 from fastapi import HTTPException
 

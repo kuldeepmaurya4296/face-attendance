@@ -19,13 +19,18 @@ app.add_middleware(
 
 # Optional imports for real logic; fall back to mock if missing
 try:
-    from face_logic import get_face_embeddings, compare_faces
-    from blink_logic import detect_blink
-    HAS_ML_LIBS = True
-    print("OK: ML Libraries (face_recognition, mediapipe) loaded successfully.")
-except ImportError as e:
-    HAS_ML_LIBS = False
-    print(f"!!! ML Libraries missing: {e}. Running in MOCK MODE.")
+    from face_logic import get_face_embeddings, compare_faces, HAS_FACE_REC
+    HAS_FACE_LOGIC = HAS_FACE_REC
+except ImportError:
+    HAS_FACE_LOGIC = False
+
+try:
+    from blink_logic import detect_blink, HAS_BLINK_LIBS
+    HAS_BLINK_LOGIC = HAS_BLINK_LIBS
+except ImportError:
+    HAS_BLINK_LOGIC = False
+
+print(f"ML STATUS: FaceLogic={'REAL' if HAS_FACE_LOGIC else 'MOCK'}, BlinkLogic={'REAL' if HAS_BLINK_LOGIC else 'MOCK'}")
 
 BLINK_THRESH = float(os.getenv("BLINK_RATIO_THRESHOLD", 0.21))
 CONFIDENCE_THRESH = float(os.getenv("MODEL_CONFIDENCE_THRESHOLD", 0.85))
@@ -34,7 +39,8 @@ CONFIDENCE_THRESH = float(os.getenv("MODEL_CONFIDENCE_THRESHOLD", 0.85))
 def health_check():
     return {
         "status": "ML Engine is running.",
-        "mode": "REAL" if HAS_ML_LIBS else "MOCK"
+        "face_mode": "REAL" if HAS_FACE_LOGIC else "MOCK",
+        "blink_mode": "REAL" if HAS_BLINK_LOGIC else "MOCK"
     }
 
 
@@ -45,7 +51,7 @@ async def detect_blink_endpoint(file: UploadFile = File(...)):
     Used by frontend to know when to auto-capture for Face ID.
     Returns: { blinked: true/false }
     """
-    if not HAS_ML_LIBS:
+    if not HAS_BLINK_LOGIC:
         return {"blinked": True, "note": "MOCK_MODE"}
 
     image_bytes = await file.read()
@@ -62,7 +68,7 @@ async def register_face(file: UploadFile = File(...)):
     Extract face embeddings from an image.
     The face becomes the user's unique Face ID.
     """
-    if not HAS_ML_LIBS:
+    if not HAS_FACE_LOGIC:
         return {"success": True, "embeddings": [0.1] * 128, "note": "MOCK_MODE"}
         
     image_bytes = await file.read()
@@ -83,7 +89,7 @@ async def check_duplicate_face(
     gallery_data: JSON string of format [{"user_id": "...", "embeddings": [...]}, ...]
     Returns: { duplicate: true/false, matched_user_id: "..." or null }
     """
-    if not HAS_ML_LIBS:
+    if not HAS_FACE_LOGIC:
         return {"duplicate": False, "matched_user_id": None, "note": "MOCK_MODE"}
 
     image_bytes = await file.read()
@@ -113,7 +119,7 @@ async def verify_face(
     Used for SELF MODE (Verification). 
     Matches 1 unknown face against 1 known face (or list for that user).
     """
-    if not HAS_ML_LIBS:
+    if not HAS_FACE_LOGIC or not HAS_BLINK_LOGIC:
         return {"success": True, "liveness_pass": True, "face_match": True, "note": "MOCK_MODE"}
 
     image_bytes = await file.read()
@@ -138,7 +144,7 @@ async def search_face(
     Matches 1 unknown face against a gallery of all users in the company.
     gallery_data: JSON string of format [{"user_id": "...", "embeddings": [...]}, ...]
     """
-    if not HAS_ML_LIBS:
+    if not HAS_FACE_LOGIC or not HAS_BLINK_LOGIC:
         # Mock: match the first user in the gallery for demo
         gallery = json.loads(gallery_data)
         user_id = gallery[0]["user_id"] if gallery else "unknown"

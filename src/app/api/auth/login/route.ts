@@ -4,13 +4,34 @@ import User from '@/models/User';
 import Company from '@/models/Company';
 import connectDB from '@/lib/db';
 
+import { loginSchema, validateInput } from '@/lib/validators';
+
 const JWT_SECRET = process.env.JWT_SECRET || 'super_secret_jwt_key_123';
 
 export async function POST(req: NextRequest) {
   try {
     await connectDB();
-    const { email, password } = await req.json();
+    const body = await req.json();
+    
+    // Validate and normalize input (lowercase/trim email)
+    const validation = validateInput(loginSchema, body);
+    if (!validation.success) {
+      return NextResponse.json({ error: validation.errors[0] }, { status: 400 });
+    }
+
+    const { email, password } = validation.data;
     const user = await User.findOne({ email });
+
+    console.log('--- LOGIN DEBUG ---');
+    console.log('Query Email:', email);
+    console.log('User Found:', !!user);
+    if (user) {
+      console.log('Match result:', user.password === password);
+      // NOTE: Be careful with password logging in production; only for temporary debugging if needed
+      // console.log('Stored Pass:', user.password);
+      // console.log('Input Pass:', password);
+    }
+    console.log('-------------------');
 
     if (!user || user.password !== password) {
       return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 });
